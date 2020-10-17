@@ -4,6 +4,7 @@
 
 ### Setup GitHub Action
 Workflow is here: [.github/workflows/main.yaml](.github/workflows/main.yaml)
+Github action: https://github.com/marketplace/actions/deploy-to-heroku
 
 Set secret in github repo settings
 
