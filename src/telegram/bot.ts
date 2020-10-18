@@ -9,14 +9,7 @@ import { Podcast } from '../models/podcasts';
 import { Show } from '../models/spotify/spotify-show';
 import { TelegramLog } from '../models/telegram-log';
 
-const help_message = `
-  Send me a link of a Spotify podcast or an episode.
-
-  Esamples:
-  <code>https://open.spotify.com/show/43A9fUmUbLYaH...</code>
-  <code>https://open.spotify.com/episode/4ESFw3M5Az2rH...</code>
-
-I will notify you when a new episode is realeased! 🎉`.trim();
+const help_message = `Send me a link of a Spotify podcast or an episode.\nI will notify you when a new episode is realeased! 🎉`;
 
 export class BotApp {
   protected logCollection: DbService<TelegramLog>
@@ -129,6 +122,7 @@ export class BotApp {
         }
 
         const podcastCreated = await this.podcastCollection.create(newPodcast)
+        ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, `NEW PODCAST - ${podcastCreated.showInfo.name}`)
         console.log('NEW PODCAST -', podcastCreated.showInfo.name);
 
         this.editMessage(ctx, temp_message, 'Success! \nYou will receive a message when new episode is released! 🎉');
