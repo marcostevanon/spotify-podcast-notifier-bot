@@ -1,4 +1,5 @@
 ## Spotify Notifier Bot Telegram
+[![Netlify Status](https://api.netlify.com/api/v1/badges/3e75f43d-9871-435a-8182-8c93e83ed702/deploy-status)](https://app.netlify.com/sites/spnbot/deploys)
 ---
 ### Install dependencies
 ``` zsh

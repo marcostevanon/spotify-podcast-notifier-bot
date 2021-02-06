@@ -1,7 +1,7 @@
 import { Context, Telegraf } from 'telegraf';
 import { InputTextMessageContent, Message } from 'telegraf/typings/telegram-types';
 import { DbService, DbServiceFactory } from '../helpers/mongo-helper';
-import { Scheduler } from '../scheduler';
+import { Scheduler } from '../observer';
 import { SpotifyAuthHelper } from '../helpers/spotify-helper';
 import { Collections } from '../models/mongo-collections';
 import { Podcast } from '../models/podcasts';
