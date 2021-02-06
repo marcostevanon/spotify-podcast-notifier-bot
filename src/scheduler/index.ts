@@ -1,21 +1,28 @@
 import { differenceWith, isEqual } from 'lodash';
 import cron from 'node-cron';
-import Telegraf, { Extra, Markup } from 'telegraf';
-import { TelegrafContext } from 'telegraf/typings/context';
-import { Collections } from '../models/collections';
+import { Context, Markup, Telegraf } from 'telegraf';
+import { Collections } from '../models/mongo-collections';
 import { Podcast } from '../models/podcasts';
 import { Episode } from '../models/spotify/spotify-episode';
 import { ShowPaginator } from '../models/spotify/spotify-show';
-import { DbService, DbServiceFactory } from './mongo-helper';
-import { SpotifyAuthHelper } from './spotify-helper';
+import { DbService, DbServiceFactory } from '../helpers/mongo-helper';
+import { SpotifyAuthHelper } from '../helpers/spotify-helper';
 
 export class Scheduler {
-  protected telegraf: Telegraf<TelegrafContext>;
+  protected telegraf: Telegraf<Context>;
   protected spotify: SpotifyAuthHelper;
-  protected podcastCollection: DbService<Podcast>;
+
+  private _podcastCollection: Promise<DbService<Podcast>>;
+  protected get podcastDb(): Promise<DbService<Podcast>> {
+    if (!this._podcastCollection) {
+      this._podcastCollection = new DbServiceFactory<Podcast>()
+        .fromCollection(Collections.PODCASTS)
+    }
+    return this._podcastCollection;
+  };
 
   constructor(instances?: {
-    telegrafInstace?: Telegraf<TelegrafContext>,
+    telegrafInstace?: Telegraf<Context>,
     spotifyInstance?: SpotifyAuthHelper
   }) {
     // initialize telegraf (just form messages sending)
@@ -34,18 +41,12 @@ export class Scheduler {
     cron.schedule('*/2 * * * *', async () => {
       const start = Date.now();
 
-      // ensure db connection
-      if (!this.podcastCollection) {
-        this.podcastCollection = await new DbServiceFactory<Podcast>()
-          .fromCollection(Collections.PODCASTS)
-      }
-
       // query that returns documents udated more than 5 minutes ago (avoid high traffic to Spotify APIs)
       const beforeLastCheck = new Date();
       const minimumRetryDelay = 5;
       beforeLastCheck.setMinutes(beforeLastCheck.getMinutes() - minimumRetryDelay);
 
-      const shows = await this.podcastCollection.find({
+      const shows = await (await this.podcastDb).find({
         $or: [
           { lastCheck: { $exists: false } },
           { lastCheck: { $lt: beforeLastCheck } }]
@@ -53,7 +54,7 @@ export class Scheduler {
 
       const promises = shows.map(show => this.notifyNewEpisodes(show));
       await Promise.all(promises)
-        .catch(err => console.log(err));
+        .catch(err => console.log(JSON.stringify(err, null, 2)));
 
       console.log(`[${(new Date()).toISOString()}] Scheduler -> Checked: ${promises.length} - Take: ${(Date.now() - start) / 1000}s`,)
     });
@@ -61,12 +62,6 @@ export class Scheduler {
 
   async notifyNewEpisodes(podcast: Podcast): Promise<void> {
     // every promise execute following operations
-
-    // ensure db connection
-    if (!this.podcastCollection) {
-      this.podcastCollection = await new DbServiceFactory<Podcast>()
-        .fromCollection(Collections.PODCASTS)
-    }
 
     let showResponse: ShowPaginator;
     try {
@@ -103,7 +98,7 @@ export class Scheduler {
       episodesToSend = differenceResult;
     }
     podcast.lastCheck = new Date();
-    await this.podcastCollection.update(podcast._id, podcast);
+    await (await this.podcastDb).update(podcast._id, podcast);
 
     if (episodesToSend.length) {
       console.log('Scheduler -> Notification sent for:', podcast.showInfo.name);
@@ -117,14 +112,18 @@ Release Date: ${episode.release_date}
 `.trim()
 
       await this.telegraf.telegram.sendMessage(podcast.userInfo.id, updateMessage,
-        Extra
-          .HTML(true)
-          .markup((m: Markup) =>
-            m.inlineKeyboard([
-              Markup.urlButton('Podcast Page', podcast.showInfo.external_urls.spotify),
-              Markup.urlButton('Play Episode', episode.external_urls.spotify),
-            ], {})
-          )
+        Markup.inlineKeyboard([
+          Markup.button.url('Podcast Page', podcast.showInfo.external_urls.spotify),
+          Markup.button.url('Play Episode', episode.external_urls.spotify),
+        ])
+        // Extra
+        //   .HTML(true)
+        //   .markup((m: Markup) =>
+        //     m.inlineKeyboard([
+        //       Markup.urlButton('Podcast Page', podcast.showInfo.external_urls.spotify),
+        //       Markup.urlButton('Play Episode', episode.external_urls.spotify),
+        //     ], {})
+        //   )
       );
     }
   }

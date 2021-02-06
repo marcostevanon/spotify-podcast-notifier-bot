@@ -1,19 +1,18 @@
-import { Telegraf } from 'telegraf';
-import { TelegrafContext } from 'telegraf/typings/context';
-import { ExtraEditMessage, Message } from 'telegraf/typings/telegram-types';
+import { Context, Telegraf } from 'telegraf';
+import { InputTextMessageContent, Message } from 'telegraf/typings/telegram-types';
 import { DbService, DbServiceFactory } from '../helpers/mongo-helper';
-import { Scheduler } from '../helpers/scheduler';
+import { Scheduler } from '../scheduler';
 import { SpotifyAuthHelper } from '../helpers/spotify-helper';
-import { Collections } from '../models/collections';
+import { Collections } from '../models/mongo-collections';
 import { Podcast } from '../models/podcasts';
 import { Show } from '../models/spotify/spotify-show';
 import { TelegramLog } from '../models/telegram-log';
 
 const help_message = `Send me a link of a Spotify podcast or an episode.\nI will notify you when a new episode is realeased! 🎉`;
 
-export class BotApp {
+export class Bot {
   protected logCollection: DbService<TelegramLog>
-  protected telegraf: Telegraf<TelegrafContext>;
+  public telegraf: Telegraf<Context>;
   protected spotify: SpotifyAuthHelper;
   protected podcastCollection: DbService<Podcast>;
 
@@ -28,8 +27,12 @@ export class BotApp {
 
   initBotCommands() {
     this.telegraf.on('message', (ctx, next) => {
-      if (ctx.from.id !== +process.env.TELEGRAM_ADMIN_ID) {
-        ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, `[${ctx.from.id}] ${ctx.from.username} - ${ctx.from.first_name} ${ctx.from.last_name} (${ctx.from.language_code})\n${ctx.message.text}`, { disable_web_page_preview: true });
+      if (!process.env.TELEGRAM_ADMIN_ID) { next() }
+      if ('text' in ctx.message) {
+        const text = ctx.message.text;
+        if (ctx.from.id !== +process.env.TELEGRAM_ADMIN_ID) {
+          ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, `[${ctx.from.id}] ${ctx.from.username} - ${ctx.from.first_name} ${ctx.from.last_name} (${ctx.from.language_code})\n${text}`, { disable_web_page_preview: true });
+        }
       }
       next();
     });
@@ -66,11 +69,11 @@ export class BotApp {
           return text_message;
         });
 
-        const reply_message = `You are tracking the following podcasts: ${podcastUserListText.join('')}`
-        this.editMessage(ctx, temp_message, reply_message, { parse_mode: 'HTML', disable_web_page_preview: true });
+        const message_text = `You are tracking the following podcasts: ${podcastUserListText.join('')}`
+        this.editMessage(ctx, temp_message, message_text, { message_text, parse_mode: 'HTML', disable_web_page_preview: true });
 
       } catch (err) {
-        ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, err.stack)
+        this.sendToAdmin(ctx, err.stack)
         this.editMessage(ctx, temp_message, 'Something went wrong! 😔 \nAdmin has been notified, try again later!');
       }
     });
@@ -95,7 +98,6 @@ export class BotApp {
       }
 
       const temp_message = await ctx.reply('Verifing...')
-
 
       const newPodcast: Partial<Podcast> = {
         createdAt: new Date(),
@@ -122,7 +124,7 @@ export class BotApp {
         }
 
         const podcastCreated = await this.podcastCollection.create(newPodcast)
-        ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, `NEW PODCAST - ${podcastCreated.showInfo.name}`)
+        this.sendToAdmin(ctx, `NEW PODCAST - ${podcastCreated.showInfo.name}`);
         console.log('NEW PODCAST -', podcastCreated.showInfo.name);
 
         this.editMessage(ctx, temp_message, 'Success! \nYou will receive a message when new episode is released! 🎉');
@@ -134,17 +136,18 @@ export class BotApp {
 
         return;
       } catch (err) {
-        ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, err.stack)
-        ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, 'data ref: ' + JSON.stringify(newPodcast, null, 2))
+        this.sendToAdmin(ctx, err.stack);
+        this.sendToAdmin(ctx, 'data ref: ' + JSON.stringify(newPodcast, null, 2));
         this.editMessage(ctx, temp_message, 'Something went wrong! 😔 \nAdmin has been notified, try again later!');
         return;
       }
     });
 
-    this.telegraf.launch();
+    // this.telegraf.launch();  // no webhook version
+    return this.telegraf;
   }
 
-  protected editMessage(ctx: TelegrafContext, message: Message, newText: string, extra?: ExtraEditMessage) {
+  protected editMessage(ctx: Context, message: Message, newText: string, extra?: InputTextMessageContent) {
     return ctx.telegram.editMessageText(message.chat.id, message.message_id, null, newText, extra);
   }
 
@@ -157,4 +160,9 @@ export class BotApp {
 
     this.logCollection.create(JSON.parse(log));
   })
+
+  protected sendToAdmin(ctx: Context, message: string) {
+    if (!process.env.TELEGRAM_ADMIN_ID) { return }
+    ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, message)
+  }
 }

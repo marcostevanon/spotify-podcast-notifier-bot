@@ -1,6 +1,15 @@
-# Spotify Notifier Bot Telegram
-
-## SETUP
+## Spotify Notifier Bot Telegram
+---
+### Install dependencies
+``` zsh
+npm install
+```
+### Start only telegram bot - development
+``` zsh
+npm run botdev
+```
+---
+### SETUP PRODUCTION
 
 ### Setup GitHub Action
 Workflow is here: [.github/workflows/main.yaml](.github/workflows/main.yaml)
