@@ -1,6 +1,7 @@
 import { differenceWith, isEqual } from 'lodash';
-import cron from 'node-cron';
+// import cron from 'node-cron';
 import { Context, Markup, Telegraf } from 'telegraf';
+import { config } from 'dotenv';
 import { Collections } from '../models/mongo-collections';
 import { Podcast } from '../models/podcasts';
 import { Episode } from '../models/spotify/spotify-episode';
@@ -8,7 +9,7 @@ import { ShowPaginator } from '../models/spotify/spotify-show';
 import { DbService, DbServiceFactory } from '../helpers/mongo-helper';
 import { SpotifyAuthHelper } from '../helpers/spotify-helper';
 
-export class Scheduler {
+export class Observer {
   protected telegraf: Telegraf<Context>;
   protected spotify: SpotifyAuthHelper;
 
@@ -25,6 +26,7 @@ export class Scheduler {
     telegrafInstace?: Telegraf<Context>,
     spotifyInstance?: SpotifyAuthHelper
   }) {
+    config();
     // initialize telegraf (just form messages sending)
     this.telegraf = instances?.telegrafInstace
       ? instances.telegrafInstace
@@ -36,28 +38,33 @@ export class Scheduler {
       : new SpotifyAuthHelper();
   }
 
+  static checkShow() {
+    console.log('Checking...')
+  }
+
   // periodically check for new episodes
   startPolling() {
-    cron.schedule('*/2 * * * *', async () => {
-      const start = Date.now();
+    //   cron.schedule('*/2 * * * *', async () => {
+    //     const start = Date.now();
 
-      // query that returns documents udated more than 5 minutes ago (avoid high traffic to Spotify APIs)
-      const beforeLastCheck = new Date();
-      const minimumRetryDelay = 5;
-      beforeLastCheck.setMinutes(beforeLastCheck.getMinutes() - minimumRetryDelay);
+    //     // query that returns documents udated more than 5 minutes ago (avoid high traffic to Spotify APIs)
+    //     const beforeLastCheck = new Date();
+    //     const minimumRetryDelay = 5;
+    //     beforeLastCheck.setMinutes(beforeLastCheck.getMinutes() - minimumRetryDelay);
 
-      const shows = await (await this.podcastDb).find({
-        $or: [
-          { lastCheck: { $exists: false } },
-          { lastCheck: { $lt: beforeLastCheck } }]
-      });
+    //     const shows = await (await this.podcastDb).find({
+    //       $or: [
+    //         { lastCheck: { $exists: false } },
+    //         { lastCheck: { $lt: beforeLastCheck } }]
+    //     });
 
-      const promises = shows.map(show => this.notifyNewEpisodes(show));
-      await Promise.all(promises)
-        .catch(err => console.log(JSON.stringify(err, null, 2)));
+    //     const promises = shows.map(show => this.notifyNewEpisodes(show));
+    //     await Promise.all(promises)
+    //       .catch(err => console.log(JSON.stringify(err, null, 2)));
 
-      console.log(`[${(new Date()).toISOString()}] Scheduler -> Checked: ${promises.length} - Take: ${(Date.now() - start) / 1000}s`,)
-    });
+    //     console.log(`[${(new Date()).toISOString()}] Scheduler -> Checked: ${promises.length} - Take: ${(Date.now() - start) / 1000}s`,)
+    //   });
+    console.log('DEV MODE ~ observer started')
   }
 
   async notifyNewEpisodes(podcast: Podcast): Promise<void> {

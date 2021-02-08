@@ -1,27 +1,35 @@
-## Spotify Notifier Bot Telegram
-[![Netlify Status](https://api.netlify.com/api/v1/badges/3e75f43d-9871-435a-8182-8c93e83ed702/deploy-status)](https://app.netlify.com/sites/spnbot/deploys)
----
-### Install dependencies
+# Spotify Podcast Notifier Bot (for telegram)
+## Setup project
 ``` zsh
 npm install
 ```
-### Start only telegram bot - development
-``` zsh
-npm run botdev
-```
+Create a new `.env` file based on `.env.example` and follow the instructions. This file will be used by the 'dotenv' library to set envs in the node environment. For this project these envs are used only in locale development environment.
+
 ---
-### SETUP PRODUCTION
+## Start development
+The project is divided in 3 parts
+- bot message handler (api functions) - /api
+- observer (spotify scraper) - /src/observer
+- frontend (react app) - /src/frontend
 
-### Setup GitHub Action
-Workflow is here: [.github/workflows/main.yaml](.github/workflows/main.yaml)
-Github action: https://github.com/marketplace/actions/deploy-to-heroku
+Every part can be started with a specific command (see package.json),<br />to start all parts type 
+```
+npm start
+```
 
-Set secret in github repo settings
+---
+## Deploy: The Vercel solution
+### Staging
+This project use [vercel](https://vercel.com) as deployment solution. Vercel create production and staging environments to preview the build before appling to production.
 
-Heroku
-- Name: HEROKU_API_KEY
-- Value: [here](https://dashboard.heroku.com/account)
+Create a Vercel account and type `vercel deploy` on the terminal to login and start a deploy in preview mode.<br>or run
+```
+npm run deploy
+```
 
-ENVS
-- Name: ENVS
-- Value: *copy from repository*
+### Production
+Firts of all, in [Vercel console](https://vercel.com/dashboard), go to the setting of your project, in section 'Environment Variables' add the .env variables
+
+To deploy the project there are two options:
+- connect vercel project to your github repository and every push to master will be builded and deployed
+- run `vercel deploy --prod`
