@@ -1,7 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import qs from 'qs';
-import { Episode } from '../models/spotify/spotify-episode';
-import { Show, ShowPaginator } from '../models/spotify/spotify-show';
+import { Episode, Show, ShowPaginator } from '../models/spotify';
 
 export class SpotifyAuthHelper {
   protected clientId = process.env.SPOTIFY_CLIENT_ID;

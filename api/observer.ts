@@ -5,6 +5,7 @@ module.exports = async (req, res) => {
     return res.json({ message: 'Invalid api key' });
   }
 
-  Observer.checkShow();
+  await Observer.checkNewEpisodes()
+  await Observer.checkActiveChats();
   res.json({ message: 'Observer complete' });
 }

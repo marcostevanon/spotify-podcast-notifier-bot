@@ -18,7 +18,7 @@ export interface Message {
 export interface From {
   id:            number;
   is_bot:        boolean;
-  first_name:    string;
+  first_name:     string;
   last_name:     string;
   username:      string;
   language_code: string;
@@ -26,7 +26,7 @@ export interface From {
 
 export interface Chat {
   id:         number;
-  first_name: string;
+  first_name:  string;
   last_name:  string;
   username:   string;
   type:       string;
@@ -37,3 +37,6 @@ export interface Entity {
   length: number;
   type:   string;
 }
+
+
+// TODO rivedere con i dati dei gruppi
