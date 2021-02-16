@@ -33,3 +33,13 @@ Firts of all, in [Vercel console](https://vercel.com/dashboard), go to the setti
 To deploy the project there are two options:
 - connect vercel project to your github repository and every push to master will be builded and deployed
 - run `vercel deploy --prod`
+
+---
+
+## Technologies behind the scenes
+- **Typescript** as main scripting language
+- **WebHook** for telegram bot incoming messages
+- **AWS Lambda** & **EventBridge** (aka CloudWatch) to schedule operations
+- **Spotify API** (it's a spotify based bot... you know..)
+- **Rabbit MQ**
+- **vercel.com** for deployment

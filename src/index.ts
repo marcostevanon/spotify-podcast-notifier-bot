@@ -1,7 +1,6 @@
 // ! FOR DEVELOPMENT PURPOSE ONLY
 import { config } from 'dotenv';
 import { Bot } from './bot';
-import { Observer } from './observer';
 
 // import envs
 config();
@@ -25,7 +24,7 @@ if (!process.env.MONGO_URI) {
 // bot init
 const bot = new Bot();
 bot.launch();
-console.log('Bot\t ~ Bot started')
+console.log('Bot ~ \tBot started')
 
 // Observer.checkNewEpisodes()
 // Observer.checkActiveChats();

@@ -5,16 +5,16 @@
   "main": "index.js",
   "license": "ISC",
   "scripts": {
-    "start": "nodemon --ext ts --watch src --exec './node_modules/.bin/ts-node' src/index.ts",
+    "prestart": "npm install",
+    "start": "nodemon --ext ts --watch src --exec ts-node src/index.ts",
     "deploy": "vercel deploy",
-    "deploy:setwebhook": "bash scripts/setwebhook.sh"
+    "deploy:setwebhook": "bash scripts/setwebhook.sh && ts-node scripts/setcommands # executed during ci"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.168",
     "@types/mongodb": "^3.6.3",
-    "@types/morgan": "^1.9.2",
     "@types/node": "^14.14.22",
-    "@types/node-cron": "^2.0.3",
+    "@types/spotify-web-api-node": "^5.0.0",
     "@vercel/node": "^1.9.0",
     "dotenv": "^8.2.0",
     "dotenv-cli": "^4.0.0",
@@ -26,10 +26,9 @@
   },
   "dependencies": {
     "@types/spotify-api": "^0.0.7",
-    "axios": "^0.21.1",
     "lodash": "^4.17.20",
     "mongodb": "^3.6.3",
-    "qs": "^6.9.6",
+    "spotify-web-api-node": "^5.0.2",
     "telegraf": "^4.0.2"
   }
 }

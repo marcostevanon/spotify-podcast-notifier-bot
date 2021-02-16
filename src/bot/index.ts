@@ -1,174 +1,117 @@
-import { Context, Telegraf } from 'telegraf';
-import { InputTextMessageContent, Message } from 'telegraf/typings/telegram-types';
-import { DbService, DbServiceFactory } from '../helpers/mongo-helper';
-import { SpotifyAuthHelper } from '../helpers/spotify-helper';
+import { Context, Markup, Telegraf } from 'telegraf';
+import { InlineQueryResultArticle } from 'telegraf/typings/telegram-types';
+import { DbServiceFactory } from '../helpers/mongo-helper';
+import { SpotifyApiHelper } from '../helpers/spotify-helper';
 import { Collections } from '../models/mongo-collections';
 import { Podcast } from '../models/podcasts';
-import { Show } from '../models/spotify';
-import { TelegramLog } from '../models/telegram-log';
-
-const help_message = `Send me a link of a Spotify podcast or an episode.\nI will notify you when a new episode is realeased! 🎉`;
+import * as BotUtil from './bot-util';
+import * as messages from './reply-messages';
 
 export class Bot {
-  protected logCollection: DbService<TelegramLog>
   public telegraf: Telegraf<Context>;
-  protected spotify: SpotifyAuthHelper;
-  protected podcastCollection: DbService<Podcast>;
 
   constructor() {
-    // initialize spotify
-    this.spotify = new SpotifyAuthHelper()
-
     // initialize telegraf
     this.telegraf = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
-    this.telegraf.use(this.dbLogger);
-    this.initBotCommands()
+    this.telegraf.use(BotUtil.dbLogger);
+    this.init();
   }
 
   launch() {
     this.telegraf.launch()
-    // await telegraf.telegram.sendChatAction(process.env.TELEGRAM_ADMIN_ID, 'typing')
   }
 
-  initBotCommands() {
+  /**
+   * Declare bot commands functions
+   */
+  init() {
+
     this.telegraf.on('message', (ctx, next) => {
       if (!process.env.TELEGRAM_ADMIN_ID) { return next() }
       if ('text' in ctx.message) {
         const text = ctx.message.text;
-        console.log('🪵 Bot ~ text', text);
-        if (ctx.from.id !== +process.env.TELEGRAM_ADMIN_ID) {
-          ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, `[${ctx.from.id}] ${ctx.from.username} - ${ctx.from.first_name} ${ctx.from.last_name} (${ctx.from.language_code})\n${text}`, { disable_web_page_preview: true });
-        }
       }
       next();
     });
 
-    this.telegraf.start(ctx => ctx.reply(`Welcome!\n${help_message}`, { parse_mode: 'HTML' }));
+    this.telegraf.command('start', async ctx => {
+      await ctx.replyWithHTML(messages.welcome_1({ username: ctx.chat.type === 'private' && ctx.from.first_name }));
+      await ctx.replyWithHTML(messages.welcome_2);
+    });
 
-    this.telegraf.command('get_podcast_list', async ctx => {
-      const temp_message = await ctx.reply('Searching...')
+    this.telegraf.command('help', async ctx => {
+      ctx.replyWithHTML(messages.help, { disable_web_page_preview: true })
+    });
+
+    this.telegraf.command('list', async ctx => {
+      const tempMessage = await ctx.reply('Searching...');
+      await this.telegraf.telegram.sendChatAction(ctx.chat.id, 'typing')
 
       try {
+        const podcastCollection = await new DbServiceFactory<Podcast>()
+          .fromCollection(Collections.PODCASTS)
 
-        // ensure db connection
-        if (!this.podcastCollection) {
-          this.podcastCollection = await new DbServiceFactory<Podcast>()
-            .fromCollection(Collections.PODCASTS)
-        }
-        const podcastUserList = await this.podcastCollection.find({ "userInfo.id": ctx.from.id })
+        const podcastUserList = await podcastCollection.find({ 'subscribers.id': ctx.chat.id });
         if (!podcastUserList || !podcastUserList.length) {
-          return this.editMessage(ctx, temp_message, 'Mmm, it looks like you\'re not tracking any podcasts! 🤔\nPress /help for further info')
+          await ctx.deleteMessage(tempMessage.message_id);
+          await ctx.reply(messages.list_no_podcast);
+          return;
         }
 
-        const podcastUserListText = podcastUserList.map(podcast => {
-          const title = podcast.showInfo.name;
-          let text_message = `\n\nTitle: ${title}`;
-
-          if (!podcast.lastEpisode) {
-            text_message += `\n<i>Pending verification...</i>`;
-            return text_message;
+        const podcastListMessages = podcastUserList.map(podcast => {
+          if (!podcast.lastCheck) {
+            return messages.list_podcast_unverified({
+              title: podcast.show.name
+            });
           }
 
-          const last_release = podcast.lastEpisode.release_date;
-          const last_episode_url = podcast.lastEpisode.external_urls.spotify;
-          text_message += `\nLast Release: ${last_release}\nListen <a href="${last_episode_url}">last episode HERE</a>`;
-          return text_message;
-        });
-
-        const message_text = `You are tracking the following podcasts: ${podcastUserListText.join('')}`
-        this.editMessage(ctx, temp_message, message_text, { message_text, parse_mode: 'HTML', disable_web_page_preview: true });
-
-      } catch (err) {
-        this.sendToAdmin(ctx, err.stack)
-        this.editMessage(ctx, temp_message, 'Something went wrong! 😔 \nAdmin has been notified, try again later!');
-      }
-    });
-
-    this.telegraf.help(ctx => ctx.reply(help_message, { parse_mode: 'HTML' }));
-
-    this.telegraf.on('text', async ctx => {
-
-      const not_valid_link_message = 'This is not a valid link! 😔\n\nIf you need help use /help'
-
-      let show: Show;
-      try {
-        const urlRegExp = RegExp(/^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/gm);
-        const podcastUrl = ctx.message.text.match(urlRegExp)[0];
-
-        show = await this.spotify.getShowByUrl(podcastUrl);
-        if (!show) {
-          return ctx.reply(not_valid_link_message)
-        }
-      } catch (err) {
-        return ctx.reply(not_valid_link_message)
-      }
-
-      const temp_message = await ctx.reply('Verifing...')
-
-      const newPodcast: Partial<Podcast> = {
-        createdAt: new Date(),
-        showInfo: show,
-        userInfo: ctx.from
-      }
-
-      try {
-
-        // ensure db connection
-        if (!this.podcastCollection) {
-          this.podcastCollection = await new DbServiceFactory<Podcast>()
-            .fromCollection(Collections.PODCASTS)
-        }
-
-        // check if podcast already exist for current user
-        const existingPodcast = await this.podcastCollection.find({
-          "userInfo.id": newPodcast.userInfo.id,
-          "showInfo.id": newPodcast.showInfo.id
+          return messages.list_podcast_verified({
+            title: podcast.show.name,
+            publisher: podcast.show.publisher,
+            lastRelease: podcast.lastEpisode.release_date,
+            lastCheck: BotUtil.lastCheckToString(podcast.lastCheck),
+            lastEpisodeUrl: podcast.lastEpisode.external_urls.spotify
+          });
         })
 
-        if (existingPodcast && existingPodcast.length > 0) {
-          return this.editMessage(ctx, temp_message, `Oops, you are already tracking this podcast!`)
-        }
+        const listReply = messages.list_podcasts({ messages: podcastListMessages });
 
-        const podcastCreated = await this.podcastCollection.create(newPodcast)
-        this.sendToAdmin(ctx, `NEW PODCAST - ${podcastCreated.showInfo.name}`);
-        console.log('NEW PODCAST -', podcastCreated.showInfo.name);
-
-        this.editMessage(ctx, temp_message, 'Success! \nYou will receive a message when new episode is released! 🎉');
-
-        // await new Observer({ // TODO rivedere sta cosa
-        //   telegrafInstace: this.telegraf,
-        //   spotifyInstance: this.spotify
-        // }).notifyNewEpisodes(podcastCreated);
-
+        await ctx.deleteMessage(tempMessage.message_id);
+        await ctx.replyWithHTML(listReply, { disable_web_page_preview: true });
         return;
+
       } catch (err) {
-        this.sendToAdmin(ctx, err.stack);
-        this.sendToAdmin(ctx, 'data ref: ' + JSON.stringify(newPodcast, null, 2));
-        this.editMessage(ctx, temp_message, 'Something went wrong! 😔 \nAdmin has been notified, try again later!');
-        return;
+        BotUtil.sendToAdmin(this.telegraf.telegram, err.stack)
+        await ctx.deleteMessage(tempMessage.message_id);
+        await ctx.replyWithHTML(messages.generic_error);
       }
     });
 
-    // this.telegraf.launch();  // no webhook version
-    return this.telegraf;
-  }
+    this.telegraf.hears(BotUtil.spotifyUriRegexp, async ctx => {
+      const [, , , matchType, matchId] = ctx.match;
 
-  protected editMessage(ctx: Context, message: Message, newText: string, extra?: InputTextMessageContent) {
-    return ctx.telegram.editMessageText(message.chat.id, message.message_id, null, newText, extra);
-  }
+      const tempMessage = await ctx.reply('Verifing...')
 
-  protected dbLogger = Telegraf.log(async log => {
-    // ensure db connection
-    if (!this.logCollection) {
-      this.logCollection = await new DbServiceFactory<TelegramLog>()
-        .fromCollection(Collections.TELEGRAM_LOG)
-    }
+      try {
+        let show = await BotUtil.getShowById(matchType as 'show' | 'episode', matchId);
 
-    this.logCollection.create(JSON.parse(log));
-  })
+        await BotUtil.followShow(ctx.chat, show);
 
-  protected sendToAdmin(ctx: Context, message: string) {
-    if (!process.env.TELEGRAM_ADMIN_ID) { return }
-    ctx.telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, message)
+        await ctx.deleteMessage(tempMessage.message_id);
+        await ctx.reply(messages.track_success({ show_name: show.name }));
+
+      } catch (err) {
+        await ctx.deleteMessage(tempMessage.message_id);
+
+        // the user is already following the podcast
+        if (err.message === 'already_following_error') {
+          return ctx.reply(messages.already_following_error)
+        }
+
+        // others errors
+        BotUtil.sendToAdmin(this.telegraf.telegram, err.stack);
+        return ctx.reply(messages.generic_error)
+      }
+    });
   }
 }

@@ -1,32 +1,20 @@
 import { ObjectId } from "mongodb";
-import { User } from "telegraf/typings/telegram-types";
-import { Show, Episode } from "./spotify";
+import { Chat } from "telegraf/typings/telegram-types";
 
 export class Podcast {
-  _id:          ObjectId;
-  userInfo:     User;
-  showInfo:     Show;
-  lastCheck:    Date;
-  episodes:     Episode[] = [];
-  createdAt:    Date;
+  _id:         ObjectId;
+  show:        SpotifyApi.ShowObjectSimplified;
+  episodes:    SpotifyApi.EpisodeObjectSimplified[] = [];
+  subscribers: Chat[] = [];
+  lastCheck?:  Date;
+  createdAt:   Date;
+  get lastEpisode(): SpotifyApi.EpisodeObjectSimplified {
+    const sortedEpisodes = this.episodes.sort((a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime());
+    return sortedEpisodes[0];
+  }
 
-  constructor(show: Podcast) {
-    this.userInfo = show.userInfo;    // TODO crea costruttore, serve veramente fare tutti questi passaggi ogni volta? rivedere questi passaggi
-    this.showInfo = new Show(show.showInfo);
-    this.episodes = show.episodes ? show.episodes : [];
+  constructor(show: SpotifyApi.ShowObjectSimplified) {
+    this.show = show;
     this.createdAt = new Date()
-  }
-
-  public get lastEpisode(): Episode {
-    return this.episodes.sort((a, b) =>
-      new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
-    )[0];
-  }
-
-  addNewEpisodes(episodes: Episode[]) {
-    // if (!this.episodes || !this.episodes.length) {
-    //   return this.episodes = episodes;
-    // }
-    this.episodes.unshift(...episodes);
   }
 }
