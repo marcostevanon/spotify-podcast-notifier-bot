@@ -36,7 +36,11 @@ async function fixDb() {
       }
     }
 
+    const newSubscribersCount = newPodcasts.reduce((prev, curr) => prev + curr.subscribers.length, 0);
+
+    console.log('newSubscribersCount', newSubscribersCount);
     console.log('old documents', oldPodcasts.length);
+    console.log('newSubscribersCount & old documents ^^^ should be the same value');
     console.log('new documents', newPodcasts.length);
 
   } catch (err) {

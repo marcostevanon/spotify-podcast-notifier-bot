@@ -8,7 +8,8 @@
     "prestart": "npm install",
     "start": "nodemon --ext ts --watch src --exec ts-node src/index.ts",
     "deploy": "vercel deploy",
-    "deploy:setwebhook": "bash scripts/setwebhook.sh && ts-node scripts/setcommands # executed during ci"
+    "deploy:setwebhook": "bash scripts/setwebhook.sh && ts-node scripts/setcommands # executed during ci",
+    "build": "tsc"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.168",
