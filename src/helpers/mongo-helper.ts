@@ -22,7 +22,8 @@ export class DbService<T extends MongoEditModel> {
   }
 
   async find(query: any): Promise<T[]>;
-  async find(query: any, opts?: { limit?: number, orderby?: { [key: string]: number } }): Promise<T[]> {
+  async find(query: any, opts?: { limit?: number, orderby?: { [key: string]: number } }): Promise<T[]>;
+  async find(query: any, opts?: any): Promise<T[]> {
     return this.collection
       .find<T>(query)
       .limit(opts?.limit ? opts.limit : 0)

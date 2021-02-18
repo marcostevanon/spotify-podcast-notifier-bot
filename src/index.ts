@@ -1,6 +1,7 @@
 // ! FOR DEVELOPMENT PURPOSE ONLY
 import { config } from 'dotenv';
 import { Bot } from './bot';
+import { Observer } from './observer';
 
 // import envs
 config();
@@ -26,5 +27,5 @@ const bot = new Bot();
 bot.launch();
 console.log('Bot ~ \tBot started')
 
-// Observer.checkNewEpisodes()
+Observer.checkNewEpisodes()
 // Observer.checkActiveChats();

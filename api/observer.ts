@@ -1,11 +1,16 @@
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Observer } from '../src/observer';
 
-module.exports = async (req, res) => {
-  if (req.query.key !== process.env.OBSERVER_API_KEY) {
-    return res.json({ message: 'Invalid api key' });
+export default async (request: VercelRequest, response: VercelResponse) => {
+  if (request.query.key !== process.env.OBSERVER_API_KEY) {
+    return response.json({ message: 'Invalid api key' });
   }
 
-  await Observer.checkNewEpisodes()
-  await Observer.checkActiveChats();
-  res.json({ message: 'Observer complete' });
+  response.json({ message: 'Observer: operation started' });
+
+  try {
+    await Observer.checkNewEpisodes()
+  } catch (err) {
+    console.error(err)
+  }
 }

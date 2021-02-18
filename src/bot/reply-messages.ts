@@ -42,7 +42,7 @@ I will send you a message when ${$.show_name} release a new episode!
 `.trim();
 
 export const list_podcast_verified = ($) => `
-🎧 ${$.title}
+🎧 <b>${$.title}</b>
 🎤 ${$.publisher}
 📆 Last Release ${$.lastRelease}
 🔎 Last check ${$.lastCheck}
@@ -72,4 +72,10 @@ Admin has been notified, try again later!
 export const already_following_error = `
 Oops, you are already tracking this podcast...
 I will notify you when new episodes are available!
+`.trim();
+
+export const new_podcast_notification = ($: { showName: string, episodeName: string, lastRelease: string }) => `
+New episode available for: ${$.showName}
+Title: ${$.episodeName}
+Release Date: ${$.lastRelease}
 `.trim();

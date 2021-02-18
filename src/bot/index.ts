@@ -71,9 +71,9 @@ export class Bot {
           return messages.list_podcast_verified({
             title: podcast.show.name,
             publisher: podcast.show.publisher,
-            lastRelease: podcast.lastEpisode.release_date,
+            lastRelease: podcast.episodes[0].release_date,
             lastCheck: BotUtil.lastCheckToString(podcast.lastCheck),
-            lastEpisodeUrl: podcast.lastEpisode.external_urls.spotify
+            lastEpisodeUrl: podcast.episodes[0].external_urls.spotify
           });
         })
 
@@ -91,12 +91,12 @@ export class Bot {
     });
 
     this.telegraf.hears(BotUtil.spotifyUriRegexp, async ctx => {
-      const [, , , matchType, matchId] = ctx.match;
+      const [, , matchType1, matchType2, matchId] = ctx.match;
 
       const tempMessage = await ctx.reply('Verifing...')
 
       try {
-        let show = await BotUtil.getShowById(matchType as 'show' | 'episode', matchId);
+        let show = await BotUtil.getShowById((matchType1 || matchType2) as 'show' | 'episode', matchId);
 
         await BotUtil.followShow(ctx.chat, show);
 
@@ -164,5 +164,6 @@ export class Bot {
       }
     });
 
+    return this.telegraf;
   }
 }
