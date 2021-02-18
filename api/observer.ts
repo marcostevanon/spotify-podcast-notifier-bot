@@ -6,10 +6,9 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     return response.json({ message: 'Invalid api key' });
   }
 
-  response.json({ message: 'Observer: operation started' });
-
   try {
     await Observer.checkNewEpisodes()
+    response.json({ message: 'Observer: operation completed' });
   } catch (err) {
     console.error(err)
   }
