@@ -40,7 +40,7 @@ export class SpotifyApiHelper {
 
       // notify admin
       const telegraf = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
-      BotUtil.sendToAdmin(telegraf.telegram, error, 'SpotifyApi');
+      BotUtil.sendToAdmin(telegraf.telegram, JSON.stringify(error), 'SpotifyApi');
 
       throw new Error(message)
     }
