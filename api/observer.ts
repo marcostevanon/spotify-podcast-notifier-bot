@@ -10,6 +10,7 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     await Observer.checkNewEpisodes()
     response.json({ message: 'Observer: operation completed' });
   } catch (err) {
+    response.status(500).json({ message: 'Observer: operation failed' });
     console.error(err)
   }
 }

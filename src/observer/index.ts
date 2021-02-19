@@ -96,7 +96,7 @@ export class Observer {
         // end
       }
     } catch (err) {
-      console.log(err);
+      throw new Error(err)
     }
 
     console.log(`Observer ~ Checked: ${showChecked}/${showsCount} - ${(Date.now() - start) / 1000}s`,)

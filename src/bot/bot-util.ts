@@ -13,9 +13,9 @@ export const dbLogger = Telegraf.log(async log => {
     .then(logCollection => logCollection.create(JSON.parse(log)));
 })
 
-export const sendToAdmin = (telegram: Telegram, message: string): void => {
+export const sendToAdmin = (telegram: Telegram, message: string, source?: string): void => {
   if (!process.env.TELEGRAM_ADMIN_ID) { return }
-  telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, message)
+  telegram.sendMessage(process.env.TELEGRAM_ADMIN_ID, `Source: ${source}\n${message}`)
 }
 
 export const lastCheckToString = (lastCheckDate: Date): string => {
