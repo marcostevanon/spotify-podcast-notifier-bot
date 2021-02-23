@@ -146,13 +146,15 @@ export class Observer {
     })
 
     const telegraf = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
-    await telegraf.telegram.sendMessage(chat.id, message,
-      Markup.inlineKeyboard([
-        Markup.button.url('Podcast Page', show.external_urls.spotify),
-        Markup.button.url('Play Episode', episode.external_urls.spotify),
-      ])
-    );
-    console.log('Observer -> Notification sent to:', chat.id);
+    await telegraf.telegram.sendPhoto(chat.id, show.images[0].url, {
+      caption: message,
+      reply_markup: {
+        inline_keyboard: [[
+          Markup.button.url('Podcast Page', show.external_urls.spotify),
+          Markup.button.url('Play Episode', episode.external_urls.spotify)
+        ]]
+      }
+    })
   }
 
   static async checkActiveChats() {
